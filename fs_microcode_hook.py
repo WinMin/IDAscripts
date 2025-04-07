@@ -4,7 +4,6 @@ import ida_kernwin
 import idaapi
 from binascii import unhexlify
 
-
 def hex_to_signed_int32(hex_str):
     val = int(hex_str, 16)
     if val >= 0x80000000:
@@ -28,7 +27,7 @@ class FSWriteHook(ida_hexrays.Hexrays_Hooks):
         new_call.opcode = ida_hexrays.m_call
 
         new_call.l = ida_hexrays.mop_t()
-        new_call.l.make_helper("__my_strncpy")
+        new_call.l.make_helper("__my_strcpy")
 
         new_call.r = ida_hexrays.mop_t()
         new_call.r.zero()
@@ -94,16 +93,19 @@ class FSWriteHook(ida_hexrays.Hexrays_Hooks):
                             blk.mark_lists_dirty()
                 minsn = minsn.next
             if last_writfs_minsn:
-                stncpy_src_str = b''
+                strcpy_src_str = b''
                 write_fs_value = sorted(write_fs_value, key=lambda x: hex_to_signed_int32(x[0]))
                 for _ in write_fs_value:
                     s = _[1]
 
                     if len(s[2:]) % 2 == 0:
-                        stncpy_src_str += unhexlify(s[2:])[::-1]
+                        strcpy_src_str += unhexlify(s[2:])[::-1]
                     else:
-                        stncpy_src_str += unhexlify('0' + s[2:])[::-1]
-                new_call = self._build_helper_strncpy(last_writfs_minsn, stncpy_src_str.decode('latin'))
+                        strcpy_src_str += unhexlify('0' + s[2:])[::-1]
+                if b'\n' in strcpy_src_str:
+                    strcpy_src_str = strcpy_src_str.replace(b'\n', b'\\n')
+                print(strcpy_src_str.decode('latin'))
+                new_call = self._build_helper_strncpy(last_writfs_minsn, strcpy_src_str.decode('latin'))
                 last_blk.insert_into_block(new_call, last_writfs_minsn)
 
         return dirty
