@@ -88,7 +88,7 @@ class FSWriteHook(ida_hexrays.Hexrays_Hooks):
                                         data_val = callargs[1].nnn.value
                                         write_fs_value.append((hex(dst_val), hex(data_val)))
                                     elif callargs[0].t == ida_hexrays.mop_d and callargs[1].t == ida_hexrays.mop_n:
-                                        dst_val = callargs[0].value(is_signed=False)
+                                        dst_val = callargs[0].value(is_signed=True)
                                         data_val = callargs[1].nnn.value
                                         write_fs_value.append((hex(dst_val), hex(data_val)))
 
