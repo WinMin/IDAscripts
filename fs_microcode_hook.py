@@ -86,24 +86,29 @@ class FSWriteHook(ida_hexrays.Hexrays_Hooks):
                                     if callargs[1].t == ida_hexrays.mop_n and callargs[0].t == ida_hexrays.mop_n:
                                         dst_val = callargs[0].nnn.value
                                         data_val = callargs[1].nnn.value
-
+                                        write_fs_value.append((hex(dst_val), hex(data_val)))
+                                    elif callargs[0].t == ida_hexrays.mop_d and callargs[1].t == ida_hexrays.mop_n:
+                                        dst_val = callargs[0].value(is_signed=False)
+                                        data_val = callargs[1].nnn.value
                                         write_fs_value.append((hex(dst_val), hex(data_val)))
 
                             blk.make_nop(minsn)
                             blk.mark_lists_dirty()
+
                 minsn = minsn.next
             if last_writfs_minsn:
                 strcpy_src_str = b''
                 write_fs_value = sorted(write_fs_value, key=lambda x: hex_to_signed_int32(x[0]))
+                self._debug_print(f'write_fs_value list: {write_fs_value}')
                 for _ in write_fs_value:
                     s = _[1]
-
                     if len(s[2:]) % 2 == 0:
                         strcpy_src_str += unhexlify(s[2:])[::-1]
                     else:
                         strcpy_src_str += unhexlify('0' + s[2:])[::-1]
                 if b'\n' in strcpy_src_str:
                     strcpy_src_str = strcpy_src_str.replace(b'\n', b'\\n')
+
                 print(strcpy_src_str.decode('latin'))
                 new_call = self._build_helper_strncpy(last_writfs_minsn, strcpy_src_str.decode('latin'))
                 last_blk.insert_into_block(new_call, last_writfs_minsn)
@@ -135,7 +140,10 @@ class FSMicrocodePlugin(ida_idaapi.plugin_t):
     def run(self, arg):
         if ida_hexrays.init_hexrays_plugin():
             self.hook = FSWriteHook()
-            self.hook.hook()
+            try:
+                self.hook.hook()
+            except Exception as e:
+                print(f"Error while hooking: {e}")
         else:
             print("Hex-rays decompiler is not available")
             return ida_idaapi.PLUGIN_SKIP
